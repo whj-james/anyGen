@@ -7,6 +7,8 @@ from PIL.Image import Image
 import os
 from dotenv import load_dotenv
 
+from common.config import BACKEND_ROOT
+
 load_dotenv()
 
 # Get the token from HuggingFace 
@@ -20,7 +22,8 @@ pipe = StableDiffusionPipeline.from_pretrained(
     "CompVis/stable-diffusion-v1-4", 
     revision="fp16", 
     torch_dtype=torch.float16,
-    use_auth_token=HF_TOKEN
+    use_auth_token=HF_TOKEN,
+    cache_dir=BACKEND_ROOT / '.cache'
     )
 
 if torch.backends.mps.is_available():

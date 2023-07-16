@@ -1,11 +1,15 @@
 import pydantic as _pydantic
 from typing import Optional
-
-class _PromptBase(_pydantic.BaseModel):
-    seed: Optional[int] = 42
-    num_inference_steps: int = 10
-    guidance_scale: float = 7.5
+from PIL.Image import Image
 
 
-class ImageCreate(_PromptBase):
-    prompt: str
+class _SdParamsBase(_pydantic.BaseModel):
+    num_inference_steps: int = 10  # sampling steps
+    guidance_scale: float = 7.5  # also called CFG scale
+    num_images_per_prompt: Optional[int] = 4
+    strength: float = 0.5
+
+
+class Image2Image(_SdParamsBase):
+    str_prompt: str
+    img_prompt: object

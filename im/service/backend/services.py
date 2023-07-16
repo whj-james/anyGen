@@ -2,12 +2,12 @@ from pathlib import Path
 import schemas as _schemas
 
 import torch 
-from diffusers import StableDiffusionPipeline
+from diffusers import StableDiffusionImg2ImgPipeline
 from PIL.Image import Image
 import os
 from dotenv import load_dotenv
 
-from common.config import BACKEND_ROOT
+from common.config import CACHE_DIR
 
 load_dotenv()
 
@@ -18,12 +18,12 @@ Note: make sure .env exist and contains your token
 HF_TOKEN = os.getenv('HF_TOKEN')
 
 # Create the pipe 
-pipe = StableDiffusionPipeline.from_pretrained(
-    "CompVis/stable-diffusion-v1-4", 
+pipe = StableDiffusionImg2ImgPipeline.from_pretrained(
+    "runwayml/stable-diffusion-v1-5", 
     revision="fp16", 
     torch_dtype=torch.float16,
     use_auth_token=HF_TOKEN,
-    cache_dir=BACKEND_ROOT / '.cache'
+    cache_dir=CACHE_DIR
     )
 
 if torch.backends.mps.is_available():
@@ -34,13 +34,13 @@ else:
 pipe.to(device)
 
 
-async def generate_image(imgPrompt: _schemas.ImageCreate) -> Image: 
-    generator = None if imgPrompt.seed is None else torch.Generator().manual_seed(int(imgPrompt.seed))
-
-    image: Image = pipe(imgPrompt.prompt,
-                        guidance_scale=imgPrompt.guidance_scale, 
-                        num_inference_steps=imgPrompt.num_inference_steps, 
-                        generator = generator, 
+async def img2img(create_params: _schemas.Image2Image) -> Image: 
+    image: Image = pipe(create_params.str_prompt,
+                        image=create_params.img_prompt,
+                        guidance_scale=create_params.guidance_scale, 
+                        num_inference_steps=create_params.num_inference_steps, 
+                        num_images_per_prompt=create_params.num_images_per_prompt,
+                        strength=create_params.strength,
                     ).images[0]
     
     return image

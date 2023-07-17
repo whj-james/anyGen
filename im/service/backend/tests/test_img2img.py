@@ -28,4 +28,4 @@ class TestGenImg(unittest.IsolatedAsyncioTestCase):
             str_prompt='Face of a yellow cat, high resolution, sitting on a park bench'
         )
         gen_image = await img2img(img2img_params)
-        gen_image.save(CACHE_DIR.joinpath('cat.png'))
+        gen_image.save(CACHE_DIR.joinpath(f'cat.png'))

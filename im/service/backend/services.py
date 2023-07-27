@@ -3,7 +3,7 @@ import schemas as _schemas
 
 import torch 
 from diffusers import StableDiffusionImg2ImgPipeline
-from PIL.Image import Image
+from PIL import Image
 import os
 from dotenv import load_dotenv
 
@@ -23,7 +23,9 @@ pipe = StableDiffusionImg2ImgPipeline.from_pretrained(
     revision="fp16", 
     torch_dtype=torch.float16,
     use_auth_token=HF_TOKEN,
-    cache_dir=CACHE_DIR
+    cache_dir=CACHE_DIR,
+    safety_checker = None,
+    requires_safety_checker = False
     )
 
 if torch.backends.mps.is_available():
@@ -34,9 +36,10 @@ else:
 pipe.to(device)
 
 
-async def img2img(create_params: _schemas.Image2Image) -> Image: 
-    image: Image = pipe(create_params.str_prompt,
-                        image=create_params.img_prompt,
+async def img2img(create_params: _schemas.Image2Image) -> Image.Image:
+    img_prompt: Image.Image = create_params.img_prompt.resize((512, 512), Image.Resampling.LANCZOS)
+    image: Image.Image = pipe(create_params.str_prompt,
+                        image=img_prompt,
                         guidance_scale=create_params.guidance_scale, 
                         num_inference_steps=create_params.num_inference_steps, 
                         num_images_per_prompt=create_params.num_images_per_prompt,

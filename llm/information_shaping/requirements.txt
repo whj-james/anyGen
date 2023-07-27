@@ -1,0 +1,7 @@
+langchain
+pdfminer.six
+unstructured[local-inference]
+openai
+tiktoken
+faiss-cpu
+gradio

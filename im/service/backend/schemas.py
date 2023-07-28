@@ -8,6 +8,7 @@ class _SdParamsBase(_pydantic.BaseModel):
     guidance_scale: float = 7.5  # also called CFG scale
     num_images_per_prompt: Optional[int] = 1
     strength: float = 0.5
+    seed: Optional[int]
 
 
 class Text2Image(_SdParamsBase):

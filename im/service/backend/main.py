@@ -24,8 +24,8 @@ async def img2img(
     img_prompt: Annotated[UploadFile, File()],
     str_prompt: Annotated[str, Form()],
     sampling_steps: Annotated[int, Form(ge=1.0, le=150, alias='inference_steps')] = 10,
-    cfg_scale: Annotated[float, Form(ge=1.0, le=30.0, alias='guidance_scale')] = 7.5,
-    denoising_strength: Annotated[float, Form(ge=0.0, le=1.0, alias='strength')] = 0.5,
+    cfg_scale: Annotated[float, Form(ge=1.0, le=30.0, alias='guidance_scale')] = 15,
+    denoising_strength: Annotated[float, Form(ge=0.0, le=1.0, alias='strength')] = 0.8,
     num_images_per_prompt: Annotated[int, Form()] = 4,
     ):
     img2img_params = _schemas.Image2Image(

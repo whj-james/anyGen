@@ -1,5 +1,6 @@
 fastapi[all]
-diffusers==0.10.0
+diffusers==0.18.0
+opencv-python==4.8.0.74
 transformers
 scipy
 ftfy

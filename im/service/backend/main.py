@@ -14,7 +14,6 @@ import io
 app = FastAPI()
 
 
-# Endpoint to test the Front-end and backend
 @app.get("/hi")
 async def root():
     return {"message": "Hi"}

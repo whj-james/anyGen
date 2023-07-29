@@ -5,3 +5,4 @@ openai
 tiktoken
 faiss-cpu
 gradio
+fastapi=0.100.1

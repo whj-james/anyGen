@@ -1,10 +1,12 @@
 import os
 import pickle
+from typing import List
 
 from langchain.prompts.prompt import PromptTemplate
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import ConversationalRetrievalChain
-from langchain.memory import ConversationBufferMemory
+
+from schema import Dialog, DocRef, RepliedDialog, ChatHistory
 
 _template = """Given the following conversation and a follow up question, rephrase the follow up question to be a standalone question.
 You can assume the question about summaries or specifications of building planning rules.
@@ -73,6 +75,27 @@ def chat_cli():
     print('AI: See you.')
 
 
-if __name__ == '__main__':
-    chat_cli()
+class ChatDocAPI:
+    def __init__(self):
+        with open('./assets/vectorstore.pkl', mode='rb') as fd:
+            vectorstore = pickle.load(fd)
+        self.qa_chain = get_chain(vectorstore)
+    
+    def chat(self, dialog: Dialog):
+        chat_history = [(hist.user, hist.agent) for hist in dialog.chat_history]
+        res = self.qa_chain({"question": dialog.user, "chat_history": chat_history})
+
+        refs = []
+        for src in res['source_documents']:
+            ref_id = os.path.basename(f'{src.metadata["source"]}')
+            ref = DocRef(ref_id=ref_id, content=src.page_content)
+            refs.append(ref)
+        
+        question = dialog.user
+        chat_history = dialog.chat_history
+        answer = res['answer']
+        chat_history.append(ChatHistory(user=question, agent=answer))
+        dialog = RepliedDialog(user=question, chat_history=chat_history, agent=answer, refs=refs)
+        return dialog
+
 

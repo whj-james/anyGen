@@ -6,35 +6,21 @@ from langchain.prompts.prompt import PromptTemplate
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import ConversationalRetrievalChain
 
-from schema import Dialog, DocRef, RepliedDialog, ChatHistory
-
-_template = """Given the following conversation and a follow up question, rephrase the follow up question to be a standalone question.
-You can assume the question about summaries or specifications of building planning rules.
-
-Chat History:
-{chat_history}
-Follow Up Input: {question}
-Standalone question:"""
-CONDENSE_QUESTION_PROMPT = PromptTemplate.from_template(_template)
-
-template = """You are an AI assistant for answering questions about the inspection of building code compliance.
-You are given the following extracted parts of a long document and a question. Provide a brief summary of the key Planning Rules,
-along with the page number or section where each rule can be found.
-If you don't know the answer, just say "Hmm, I'm not sure." Don't try to make up an answer.
-Question: {question}
-=========
-{context}
-=========
-Answer in Markdown:"""
-QA_PROMPT = PromptTemplate(template=template, input_variables=["question", "context"])
+from schema import Dialog, DocRef, RepliedDialog, ChatHistory, _qa_template, _condense_template
 
 
-def get_chain(vectorstore):
+CONDENSE_QUESTION_PROMPT = PromptTemplate.from_template(_condense_template)
+QA_PROMPT = PromptTemplate(template=_qa_template, input_variables=["question", "context"])
+
+
+def get_chain(vectorstore, doc_qa_template: str, chat_condense_template: str):
+    chat_condense_prompt = PromptTemplate.from_template(template=chat_condense_template)
+    doc_qa_prompt = PromptTemplate(template=doc_qa_template, input_variables=["question", "context"])
     qa_chain = ConversationalRetrievalChain.from_llm(
         ChatOpenAI(temperature=0, model_name="gpt-3.5-turbo"),
         vectorstore.as_retriever(search_kwargs={"score_threshold": 0.6, "k": 5}),
-        combine_docs_chain_kwargs={"prompt": QA_PROMPT},
-        condense_question_prompt=CONDENSE_QUESTION_PROMPT,
+        combine_docs_chain_kwargs={"prompt": doc_qa_prompt},
+        condense_question_prompt=chat_condense_prompt,
         condense_question_llm=ChatOpenAI(temperature=0, model_name='gpt-3.5-turbo'),
         return_source_documents=True,
     )
@@ -45,7 +31,7 @@ class ChatDoc:
     def __init__(self):
         with open('./assets/vectorstore.pkl', mode='rb') as fd:
             vectorstore = pickle.load(fd)
-        self.qa_chain = get_chain(vectorstore)
+        self.qa_chain = get_chain(vectorstore, _qa_template, _condense_template)
         self.chat_history = []
     
     def chat(self, q: str):
@@ -65,7 +51,7 @@ def chat_cli():
         vectorstore = pickle.load(fd)
 
     chat_history = []
-    qa_chain = get_chain(vectorstore)
+    qa_chain = get_chain(vectorstore, _qa_template, _condense_template)
     while (q := input('Human:\n').lower()) != 'bye':
         a = qa_chain({"question": q, "chat_history": chat_history})
         chat_history.append((q, a['answer']))
@@ -78,12 +64,13 @@ def chat_cli():
 class ChatDocAPI:
     def __init__(self):
         with open('./assets/vectorstore.pkl', mode='rb') as fd:
-            vectorstore = pickle.load(fd)
-        self.qa_chain = get_chain(vectorstore)
+            self.vectorstore = pickle.load(fd)
     
     def chat(self, dialog: Dialog):
+        qa_chain = get_chain(self.vectorstore, dialog.doc_qa_template, dialog.chat_condense_template)
+
         chat_history = [(hist.user, hist.agent) for hist in dialog.chat_history]
-        res = self.qa_chain({"question": dialog.user, "chat_history": chat_history})
+        res = qa_chain({"question": dialog.user, "chat_history": chat_history})
 
         refs = []
         for src in res['source_documents']:
@@ -92,10 +79,12 @@ class ChatDocAPI:
             refs.append(ref)
         
         question = dialog.user
-        chat_history = dialog.chat_history
         answer = res['answer']
-        chat_history.append(ChatHistory(user=question, agent=answer))
-        dialog = RepliedDialog(user=question, chat_history=chat_history, agent=answer, refs=refs)
+        dialog.chat_history.append(ChatHistory(user=question, agent=answer))
+        dialog = RepliedDialog(user=dialog.user, 
+                               chat_history=dialog.chat_history, 
+                               agent=answer, 
+                               refs=refs, 
+                               chat_condense_template=dialog.chat_condense_template,
+                               doc_qa_template=dialog.doc_qa_template)
         return dialog
-
-
